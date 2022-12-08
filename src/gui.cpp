@@ -27,7 +27,7 @@ namespace GUI
     static float madg_beta = 0.18f;
     static float madg_zeta = 0.0001f;
 
-    static bool vtk_pc_open = false;
+    static bool vtk_pc_open = true;
     static bool vtk_oriented_pc_open = true;
 
     static bool save_to_file = false;
@@ -71,28 +71,28 @@ namespace GUI
 
     void* runFilters()
     {
-        std::ofstream ply_pc;
-        std::ofstream ply_pc_oriented;
+        // std::ofstream ply_pc;
+        // std::ofstream ply_pc_oriented;
 
-        std::string results_suffix = "_" +std::to_string(freq) + "_" + std::to_string(naive_gain) + "_" + std::to_string(madg_beta) + "_" + std::to_string(start_index) + "_" + std::to_string(end_index);
+        // std::string results_suffix = "_" +std::to_string(freq) + "_" + std::to_string(naive_gain) + "_" + std::to_string(madg_beta) + "_" + std::to_string(start_index) + "_" + std::to_string(end_index);
 
         std::string str = fPath.substr(0, fPath.length()-2);
         char ch = '/';
         size_t index = str.rfind(ch);
 
-        if (index != std::string::npos)
-        {
-            results_suffix = "out_" + fPath.substr(index+1, fPath.length()-2-index) + results_suffix;
-        }
-        else
-        {
-            results_suffix = "out" + results_suffix;
-        }
+        // if (index != std::string::npos)
+        // {
+        //     results_suffix = "out_" + fPath.substr(index+1, fPath.length()-2-index) + results_suffix;
+        // }
+        // else
+        // {
+        //     results_suffix = "out" + results_suffix;
+        // }
 
-        std::filesystem::create_directories(fPath + results_suffix);
+        // std::filesystem::create_directories(fPath + results_suffix);
 
-        ply_pc.open(fPath + results_suffix + "/pc.ply");
-        ply_pc_oriented.open(fPath + results_suffix + "/pc_oriented.ply");
+        // ply_pc.open(fPath + results_suffix + "/pc.ply");
+        // ply_pc_oriented.open(fPath + results_suffix + "/pc_oriented.ply");
 
         // run filters here
         // for (int i = start_index; i < end_index; ++i)
@@ -102,26 +102,26 @@ namespace GUI
 
         // }
 
-        ply_pc.close();
-        ply_pc_oriented.close();
+        // ply_pc.close();
+        // ply_pc_oriented.close();
 
-        vtk_viewer_pc.removeActor(ply_actor_pc);
-        vtk_viewer_oriented_pc.removeActor(ply_actor_oriented_pc);        
+        // vtk_viewer_pc.removeActor(ply_actor_pc);
+        // vtk_viewer_oriented_pc.removeActor(ply_actor_oriented_pc);        
 
         ply_actor_pc = getPLYActor("../data/7_dp.ply");
         ply_actor_oriented_pc = getPLYActor("../data/7_gt.ply");
 
-        vtk_viewer_pc.addActor();
-        vtk_viewer_oriented_pc.addActor();
+        vtk_viewer_pc.addActor(ply_actor_pc);
+        vtk_viewer_oriented_pc.addActor(ply_actor_oriented_pc);
 
         // update actors here
         // vtk_viewer_madg.updateActors(ply_actor_pc, gravity_vectors_madg.at(0));        
         // vtk_viewer_naive.updateActors(ply_actor_oriented_pc, gravity_vectors_naive.at(0));
 
-        if(!save_to_file)
-        {
-            std::filesystem::remove_all(fPath + results_suffix);
-        }
+        // if(!save_to_file)
+        // {
+        //     std::filesystem::remove_all(fPath + results_suffix);
+        // }
         
         is_calculated = true;
         loading = false;
@@ -262,7 +262,7 @@ namespace GUI
                 // vtk_viewer_madg.updateActors(actors_madg, gravity_vectors_madg.at(vector_index));
                 // vtk_viewer_gt.updateActors(actors_gt, gravity_vectors_gt.at(vector_index));
                 
-                ImGui::PopButtonRepeat();
+                // ImGui::PopButtonRepeat();
 
                 ImGui::Text("");
                 ImGui::Text("Show PC:");

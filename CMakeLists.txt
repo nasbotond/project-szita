@@ -72,6 +72,7 @@ find_package(VTK COMPONENTS
   CommonColor
   CommonCore
   CommonDataModel
+  IOPLY
   CommonTransforms
   FiltersSources
   FiltersCore
