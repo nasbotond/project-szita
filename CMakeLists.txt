@@ -73,6 +73,7 @@ find_package(VTK COMPONENTS
   CommonCore
   CommonDataModel
   IOPLY
+  IOImage
   CommonTransforms
   FiltersSources
   FiltersCore

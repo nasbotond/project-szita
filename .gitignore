@@ -26,3 +26,4 @@ _deps
 build/*
 *.mp4
 *.ply
+*.png

@@ -121,9 +121,9 @@ void VtkViewer::init()
 	renderer->ResetCamera();
 	renderer->SetBackground(DEFAULT_BACKGROUND);
 	renderer->SetBackgroundAlpha(DEFAULT_ALPHA);
-	renderer->GetActiveCamera()->SetPosition(1, -5, 1);
-    renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
-    renderer->GetActiveCamera()->SetViewUp(0, 0, 1);  
+	// renderer->GetActiveCamera()->SetPosition(1, -5, 1);
+    // renderer->GetActiveCamera()->SetFocalPoint(0, 0, 0);
+    // renderer->GetActiveCamera()->SetViewUp(0, 0, 1);  
 
 	interactorStyle = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
 	interactorStyle->SetDefaultRenderer(renderer);
@@ -149,7 +149,7 @@ void VtkViewer::init()
 	renderWindow->AddRenderer(renderer);
 	renderWindow->SetInteractor(interactor);
 
-	if (!renderer || !interactorStyle || !renderWindow || !interactor)
+	if(!renderer || !interactorStyle || !renderWindow || !interactor)
 	{
 		throw VtkViewerError("Couldn't initialize VtkViewer");
 	}

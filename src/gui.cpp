@@ -1,4 +1,12 @@
 #include "gui.hpp"
+// OpenGL Loader
+#include <GL/gl3w.h> // GL3w, initialized with gl3wInit()
+
+// Include glfw3.h after our OpenGL definitions
+#include <GLFW/glfw3.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 namespace GUI 
 {
@@ -29,11 +37,47 @@ namespace GUI
 
     static bool vtk_pc_open = true;
     static bool vtk_oriented_pc_open = true;
+    static bool vtk_image_open = true;
 
     static bool save_to_file = false;
 
     // static bool show_style_editor = false;
     // static bool show_demo_window = false;
+
+    // Simple helper function to load an image into a OpenGL texture with common settings
+    bool LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height)
+    {
+        // Load from file
+        int image_width = 0;
+        int image_height = 0;
+        unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
+        if (image_data == NULL)
+            return false;
+
+        // Create a OpenGL texture identifier
+        GLuint image_texture;
+        glGenTextures(1, &image_texture);
+        glBindTexture(GL_TEXTURE_2D, image_texture);
+
+        // Setup filtering parameters for display
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
+
+        // Upload pixels into texture
+    #if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    #endif
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+        stbi_image_free(image_data);
+
+        *out_texture = image_texture;
+        *out_width = image_width;
+        *out_height = image_height;
+
+        return true;
+    }
 
     // tinyfiledialogs
     void* call_from_thread()
@@ -71,14 +115,15 @@ namespace GUI
 
     void* runFilters()
     {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         // std::ofstream ply_pc;
         // std::ofstream ply_pc_oriented;
 
         // std::string results_suffix = "_" +std::to_string(freq) + "_" + std::to_string(naive_gain) + "_" + std::to_string(madg_beta) + "_" + std::to_string(start_index) + "_" + std::to_string(end_index);
 
-        std::string str = fPath.substr(0, fPath.length()-2);
-        char ch = '/';
-        size_t index = str.rfind(ch);
+        // std::string str = fPath.substr(0, fPath.length()-2);
+        // char ch = '/';
+        // size_t index = str.rfind(ch);
 
         // if (index != std::string::npos)
         // {
@@ -137,6 +182,11 @@ namespace GUI
         // Initialize actors
         // ply_actor_pc = getPLYActor({0, 0, 0});
         // ply_actor_oriented_pc = getPLYActor({0, 0, 0});
+        // ply_actor_pc = getPLYActor("../data/7_dp.ply");
+        // ply_actor_oriented_pc = getPLYActor("../data/7_gt.ply");
+
+        // vtk_viewer_pc.addActor(ply_actor_pc);
+        // vtk_viewer_oriented_pc.addActor(ply_actor_oriented_pc);
 
         // Add actors to vtkViewer instances
         vtk_viewer_pc.getRenderer()->SetBackground(colors->GetColor3d("BkgColor").GetData());
@@ -148,6 +198,13 @@ namespace GUI
 
     void generateUI()
     {
+        int my_image_width = 0;
+        int my_image_height = 0;
+        GLuint my_image_texture = 0;
+        bool ret = LoadTextureFromFile("../data/7_opencv_disp.png", &my_image_texture, &my_image_width, &my_image_height);
+        IM_ASSERT(ret);
+
+        // ImGui::ShowDemoWindow();
         {            
             ImGui::Begin("Menu");
 
@@ -258,16 +315,11 @@ namespace GUI
                 renderer_pc->SetBackgroundAlpha(vtk2BkgAlpha);
                 renderer_oriented_pc->SetBackgroundAlpha(vtk2BkgAlpha);
 
-                // update actors
-                // vtk_viewer_madg.updateActors(actors_madg, gravity_vectors_madg.at(vector_index));
-                // vtk_viewer_gt.updateActors(actors_gt, gravity_vectors_gt.at(vector_index));
-                
-                // ImGui::PopButtonRepeat();
-
                 ImGui::Text("");
                 ImGui::Text("Show PC:");
                 ImGui::Checkbox(_labelPrefix("PC:").c_str(), &vtk_pc_open);
                 ImGui::Checkbox(_labelPrefix("Oriented PC:").c_str(), &vtk_oriented_pc_open);
+                ImGui::Checkbox(_labelPrefix("Image:").c_str(), &vtk_image_open);
                 ImGui::Text("");
             }
 
@@ -279,7 +331,7 @@ namespace GUI
         if(vtk_pc_open && is_calculated)
         {
             ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
-            ImGui::Begin("PC", &vtk_pc_open, VtkViewer::NoScrollFlags());
+            ImGui::Begin("PC", &vtk_pc_open, VtkViewer::NoScrollFlags());            
             
             vtk_viewer_pc.render();
             ImGui::End();
@@ -289,8 +341,18 @@ namespace GUI
         {
             ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
             ImGui::Begin("Oriented PC", &vtk_oriented_pc_open, VtkViewer::NoScrollFlags());
-            
+
             vtk_viewer_oriented_pc.render();
+            ImGui::End();
+        }
+
+        if(vtk_image_open && is_calculated)
+        {
+            ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Image", &vtk_image_open, VtkViewer::NoScrollFlags());
+            
+            ImGui::Image((void*)(intptr_t)my_image_texture, ImVec2(my_image_width, my_image_height));
+            
             ImGui::End();
         }
     }
