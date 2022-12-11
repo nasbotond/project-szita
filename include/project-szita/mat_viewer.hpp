@@ -36,7 +36,7 @@ class MatViewer
         GLuint textureID = 0;
         std::string name;
         int width = 0, height = 0;
-        float imageScale = 1;
+        float imageScale = 0.3;
 
         /*A helper function to create the texture*/
         void generateTexture();

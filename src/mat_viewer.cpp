@@ -100,7 +100,7 @@ void MatViewer::addToGUI(bool withControls, bool withTooltip)
 		return;
 	}
 
-	ImGui::Text(name.c_str());
+	ImGui::Text("%s", name.c_str());
 
 	// Display scale
 	ImGuiSliderFlags flags = 1;

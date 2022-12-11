@@ -31,14 +31,17 @@ namespace GUI
     // Initial UI state variables set
     static bool black_background = false;
 
-    static float naive_gain = 0.003f;
-    static float madg_beta = 0.18f;
-    static float madg_zeta = 0.0001f;
-    float imageScale = 1.f;
+    static float spatial_sigma = 0.003f;
+    static float spectral_sigma = 0.18f;
 
     static bool vtk_pc_open = true;
     static bool vtk_oriented_pc_open = true;
-    static bool vtk_image_open = true;
+
+    static bool box_image_open = false;
+    static bool gaussian_image_open = false;
+    static bool bilateral_image_open = true;
+    static bool jb_image_open = false;
+    static bool it_up_image_open = false;
 
     static bool save_to_file = false;
 
@@ -48,7 +51,11 @@ namespace GUI
     cv::Mat jb;
     cv::Mat new_d;
 
-    MatViewer mat;
+    MatViewer viewer_bilateral;
+    MatViewer viewer_gaussian;
+    MatViewer viewer_box;
+    MatViewer viewer_jb;
+    MatViewer viewer_new_d;
 
     // tinyfiledialogs
     void* call_from_thread()
@@ -97,6 +104,10 @@ namespace GUI
         iterative_upsampling(input, input_d_low, new_d);
 
         cv::cvtColor(bilateral, bilateral, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(gaussian, gaussian, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(box, box, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(jb, jb, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(new_d, new_d, cv::COLOR_GRAY2BGR);
 
         // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
@@ -143,7 +154,11 @@ namespace GUI
         std::array<unsigned char, 4> bkg{{26, 51, 77, 255}};
         colors->SetColor("BkgColor", bkg.data());
 
-        mat = MatViewer("Bilateral", bilateral);
+        viewer_bilateral = MatViewer("Bilateral", bilateral);
+        viewer_gaussian = MatViewer("Gaussian", gaussian);
+        viewer_box = MatViewer("Box", box);
+        viewer_jb = MatViewer("Joint Bilateral", jb);
+        viewer_new_d = MatViewer("Iterative Upsampling", new_d);
 
         vtk_viewer_pc.getRenderer()->SetBackground(colors->GetColor3d("BkgColor").GetData());
         vtk_viewer_oriented_pc.getRenderer()->SetBackground(colors->GetColor3d("BkgColor").GetData());
@@ -151,8 +166,6 @@ namespace GUI
 
     void generateUI()
     {        
-        mat.addToGUI();
-
         // ImGui::ShowDemoWindow();
         {            
             ImGui::Begin("Menu");
@@ -176,14 +189,9 @@ namespace GUI
 
             ImGui::Text("%s", fPath.c_str());
 
-            // Image rendering size relative to GUI size
-		    ImGui::SliderFloat("Image scale", &imageScale, 0.1, 4);
+            ImGui::InputFloat(_labelPrefix("Spatial sigma:").c_str(), &spatial_sigma, 0.001f, 0.01f, "%.5f");
 
-            ImGui::InputFloat(_labelPrefix("Naive filter gain:").c_str(), &naive_gain, 0.001f, 0.01f, "%.5f");
-
-            ImGui::InputFloat(_labelPrefix("Madg. filter beta:").c_str(), &madg_beta, 0.01f, 0.1f, "%.5f");
-
-            ImGui::InputFloat(_labelPrefix("Madg. filter zeta:").c_str(), &madg_zeta, 0.0001f, 0.001f, "%.5f");
+            ImGui::InputFloat(_labelPrefix("Spectral sigma:").c_str(), &spectral_sigma, 0.01f, 0.1f, "%.5f");
 
             ImGui::Checkbox(_labelPrefix("Save results to files: ").c_str(), &save_to_file);
 
@@ -244,7 +252,11 @@ namespace GUI
                 {
                     t.join();
                 }
-                mat.update();
+                viewer_bilateral.update();
+                viewer_gaussian.update();
+                viewer_box.update();
+                viewer_jb.update();
+                viewer_new_d.update();
 
                 auto renderer_pc = vtk_viewer_pc.getRenderer();                
                 auto renderer_oriented_pc = vtk_viewer_oriented_pc.getRenderer();
@@ -272,7 +284,11 @@ namespace GUI
                 ImGui::Text("Show PC:");
                 ImGui::Checkbox(_labelPrefix("PC:").c_str(), &vtk_pc_open);
                 ImGui::Checkbox(_labelPrefix("Oriented PC:").c_str(), &vtk_oriented_pc_open);
-                ImGui::Checkbox(_labelPrefix("Image:").c_str(), &vtk_image_open);
+                ImGui::Checkbox(_labelPrefix("Gaussian:").c_str(), &gaussian_image_open);
+                ImGui::Checkbox(_labelPrefix("Box:").c_str(), &box_image_open);
+                ImGui::Checkbox(_labelPrefix("Bilateral:").c_str(), &bilateral_image_open);
+                ImGui::Checkbox(_labelPrefix("Joint bilateral:").c_str(), &jb_image_open);
+                ImGui::Checkbox(_labelPrefix("Iterative Upsampling:").c_str(), &it_up_image_open);
                 ImGui::Text("");
             }
 
@@ -299,13 +315,49 @@ namespace GUI
             ImGui::End();
         }
 
-        if(vtk_image_open && is_calculated)
+        if(bilateral_image_open && is_calculated)
         {
-            // ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
-            // ImGui::Begin("Image", &vtk_image_open, VtkViewer::NoScrollFlags());
-            
-            // ImGui::End();           
-            
+            ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Bilateral", &bilateral_image_open, VtkViewer::NoScrollFlags()); 
+
+            viewer_bilateral.addToGUI();
+            ImGui::End();
+        }
+
+        if(box_image_open && is_calculated)
+        {
+            ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Box", &box_image_open, VtkViewer::NoScrollFlags()); 
+
+            viewer_box.addToGUI();
+            ImGui::End();
+        }
+
+        if(gaussian_image_open && is_calculated)
+        {
+            ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Gaussian", &gaussian_image_open, VtkViewer::NoScrollFlags()); 
+
+            viewer_gaussian.addToGUI();
+            ImGui::End();
+        }
+
+        if(jb_image_open && is_calculated)
+        {
+            ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Joint bilateral", &jb_image_open, VtkViewer::NoScrollFlags()); 
+
+            viewer_jb.addToGUI();
+            ImGui::End();
+        }
+
+        if(it_up_image_open && is_calculated)
+        {
+            ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Iterative Upsample", &it_up_image_open, VtkViewer::NoScrollFlags()); 
+
+            viewer_new_d.addToGUI();
+            ImGui::End();
         }
     }
 }
