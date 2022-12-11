@@ -8,6 +8,16 @@
 #include "stb_image.h"
 #include "filter.hpp"
 
+/* TODO:
+1. implement ability to change sigmas in filter functions and re-run
+2. write to point cloud and visualize those point clouds
+3. file saving solution
+4. file reading solution (hardcoded or from one directory ??)
+5. JBU upsampling vs iterative ... ?
+6. implement metrics
+7. report execution times of the filter algorithms
+*/
+
 namespace GUI 
 {
     char const* selectedfolderPath;
@@ -45,7 +55,7 @@ namespace GUI
 
     static bool save_to_file = false;
 
-    cv::Mat bilateral = cv::Mat::zeros(100, 100, CV_8U);
+    cv::Mat bilateral;
     cv::Mat gaussian;
     cv::Mat box;
     cv::Mat jb;
