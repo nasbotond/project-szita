@@ -82,6 +82,12 @@
         "memory_resource": "cpp",
         "utility": "cpp",
         "stop_token": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "list": "cpp",
+        "span": "cpp",
+        "unordered_set": "cpp",
+        "valarray": "cpp",
+        "*.ipp": "cpp",
+        "ranges": "cpp"
     }
 }

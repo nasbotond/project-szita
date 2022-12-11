@@ -23,6 +23,10 @@ include_directories(${tfd_inc})
 # together, please see CMakeLists-alt.txt
 add_executable(${EXEC_NAME} ${SOURCE_DIR}/main.cpp ${tfd_src} ${SOURCE_DIR}/app.cpp ${SOURCE_DIR}/gui.cpp)
 
+find_package ( OpenCV REQUIRED )
+include_directories ( ${OpenCV_INCLUDE_DIRS} )
+target_link_libraries(${EXEC_NAME} ${OpenCV_LIBS})
+
 # OpenGL
 find_package(OpenGL REQUIRED)
 target_link_libraries(${EXEC_NAME} OpenGL::GL)

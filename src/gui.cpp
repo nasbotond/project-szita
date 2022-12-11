@@ -45,7 +45,7 @@ namespace GUI
     // static bool show_demo_window = false;
 
     // Simple helper function to load an image into a OpenGL texture with common settings
-    bool LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height)
+    bool load_tex_from_file(const char* filename, GLuint* out_texture, int* out_width, int* out_height)
     {
         // Load from file
         int image_width = 0;
@@ -201,7 +201,7 @@ namespace GUI
         int my_image_width = 0;
         int my_image_height = 0;
         GLuint my_image_texture = 0;
-        bool ret = LoadTextureFromFile("../data/7_opencv_disp.png", &my_image_texture, &my_image_width, &my_image_height);
+        bool ret = load_tex_from_file("../data/7_opencv_disp.png", &my_image_texture, &my_image_width, &my_image_height);
         IM_ASSERT(ret);
 
         // ImGui::ShowDemoWindow();
@@ -350,7 +350,7 @@ namespace GUI
         {
             ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
             ImGui::Begin("Image", &vtk_image_open, VtkViewer::NoScrollFlags());
-            
+
             ImGui::Image((void*)(intptr_t)my_image_texture, ImVec2(my_image_width, my_image_height));
             
             ImGui::End();
