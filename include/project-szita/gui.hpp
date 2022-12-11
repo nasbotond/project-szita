@@ -17,6 +17,8 @@
 #include "vtk_actor_generator.hpp"
 #include "tinyfiledialogs.h"
 
+#include "mat_viewer.hpp"
+
 namespace GUI
 {
     void initUI();

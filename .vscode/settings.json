@@ -88,6 +88,14 @@
         "unordered_set": "cpp",
         "valarray": "cpp",
         "*.ipp": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "any": "cpp",
+        "cfenv": "cpp",
+        "csignal": "cpp",
+        "future": "cpp",
+        "shared_mutex": "cpp",
+        "strstream": "cpp",
+        "typeindex": "cpp",
+        "source_location": "cpp"
     }
 }

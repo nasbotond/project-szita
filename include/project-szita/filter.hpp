@@ -48,18 +48,18 @@ cv::Mat create_gaussian_kernel(int window_size)
 
 void box_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5) 
 {
-
     const auto width = input.cols;
     const auto height = input.rows;
+    output = cv::Mat::zeros(height, width, CV_8U);
 
     // TEMPORARY CODE
-    for (int r = 0; r < height; ++r) 
-    {
-        for (int c = 0; c < width; ++c) 
-        {
-            output.at<uchar>(r, c) = 0;
-        }
-    }
+    // for (int r = 0; r < height; ++r) 
+    // {
+    //     for (int c = 0; c < width; ++c) 
+    //     {
+    //         output.at<uchar>(r, c) = 0;
+    //     }
+    // }
 
     for (int r = window_size / 2; r < height - window_size / 2; ++r) 
     {
@@ -86,15 +86,16 @@ void gaussian_filter(const cv::Mat& input, cv::Mat& output, const int window_siz
     const auto height = input.rows;
 
     cv::Mat gaussianKernel = create_gaussian_kernel(window_size);
+    output = cv::Mat::zeros(height, width, CV_8U);
 
     // TEMPORARY CODE
-    for(int r = 0; r < height; ++r) 
-    {
-        for(int c = 0; c < width; ++c) 
-        {
-            output.at<uchar>(r, c) = 0;
-        }
-    }
+    // for(int r = 0; r < height; ++r) 
+    // {
+    //     for(int c = 0; c < width; ++c) 
+    //     {
+    //         output.at<uchar>(r, c) = 0;
+    //     }
+    // }
 
     for(int r = window_size / 2; r < height - window_size / 2; ++r) 
     {
@@ -113,21 +114,22 @@ void gaussian_filter(const cv::Mat& input, cv::Mat& output, const int window_siz
     }
 }
 
-void bilateral_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5) 
+void bilateral_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5)
 {
     const auto width = input.cols;
     const auto height = input.rows;
 
     cv::Mat gaussianKernel = create_gaussian_kernel(window_size);
+    output = cv::Mat::zeros(height, width, CV_8U);
 
     // TEMPORARY CODE
-    for(int r = 0; r < height; ++r) 
-    {
-        for(int c = 0; c < width; ++c) 
-        {
-            output.at<uchar>(r, c) = 0;
-        }
-    }
+    // for(int r = 0; r < height; ++r)
+    // {
+    //     for(int c = 0; c < width; ++c) 
+    //     {
+    //         output.at<uchar>(r, c) = 0;
+    //     }
+    // }
 
     auto d = [](float a, float b) 
     {
@@ -142,9 +144,9 @@ void bilateral_filter(const cv::Mat& input, cv::Mat& output, const int window_si
         return (1 / normalization) * std::exp(-val / (2 * sigmaSq));
     };
 
-    for(int r = window_size / 2; r < height - window_size / 2; ++r) 
+    for(int r = window_size / 2; r < height - window_size / 2; ++r)
     {
-        for(int c = window_size / 2; c < width - window_size / 2; ++c) 
+        for(int c = window_size / 2; c < width - window_size / 2; ++c)
         {
             float sum_w = 0;
             float sum = 0;
@@ -168,19 +170,20 @@ void bilateral_filter(const cv::Mat& input, cv::Mat& output, const int window_si
 
 void joint_bilateral_filter(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& output, const int window_size = 5) 
 {
-    const auto width = input.cols;
-    const auto height = input.rows;
+    const auto width = input_color.cols;
+    const auto height = input_color.rows;
 
     cv::Mat gaussianKernel = create_gaussian_kernel(window_size);
+    output = cv::Mat::zeros(height, width, CV_8U);
 
     // TEMPORARY CODE
-    for(int r = 0; r < height; ++r) 
-    {
-        for(int c = 0; c < width; ++c) 
-        {
-            output.at<uchar>(r, c) = 0;
-        }
-    }
+    // for(int r = 0; r < height; ++r)
+    // {
+    //     for(int c = 0; c < width; ++c)
+    //     {
+    //         output.at<uchar>(r, c) = 0;
+    //     }
+    // }
 
     auto d = [](float a, float b) 
     {
@@ -219,22 +222,27 @@ void joint_bilateral_filter(const cv::Mat& input_color, const cv::Mat& input_dep
     }
 }
 
-void iterative_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth)
+void iterative_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& depth)
 {
 	int uf = log2(input_color.rows / input_depth.rows); // upsample factor
-	cv::Mat depth = input_depth.clone();
+    std::cout << "uf: " << uf << std::endl;
+
+	depth = input_depth.clone();
 	cv::Mat guidance = input_color.clone();
 
 	for (int i = 0; i < uf; ++i)
 	{
 		cv::resize(depth, depth, depth.size() * 2);
 		cv::resize(guidance, guidance, depth.size());
-		joint_bilateral_filter(guidance, depth, depth, 5);
+        cv::Mat out_depth;
+		joint_bilateral_filter(guidance, depth, out_depth, 5);
+        depth = out_depth.clone();
 	}
     
 	cv::resize(depth, depth, input_color.size());
-	joint_bilateral_filter(input_color, depth, depth, 5);
-	return depth;
+    cv::Mat out_depth;
+	joint_bilateral_filter(input_color, depth, out_depth, 5);
+    depth = out_depth.clone();
 }
 
 // void joint_bilateral_upsampling()
