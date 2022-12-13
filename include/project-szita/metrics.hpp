@@ -11,7 +11,7 @@
 namespace Metrics
 {
     // Mean Absolute Difference
-    void MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
+    static void MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
     {
         cv::Mat mad;
         cv::absdiff(disp_est, disp_gt, mad);
@@ -22,7 +22,7 @@ namespace Metrics
     }
 
     // Mean Squared Error
-    void MSE(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
+    static void MSE(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
     {
         int height = disp_est.rows;
         int width = disp_est.cols;
@@ -42,7 +42,7 @@ namespace Metrics
     }
 
     // Normalized Cross Correlation
-    void NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt)
+    static void NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt)
     {
         int height = disp_est.rows;
         int width = disp_est.cols;
@@ -59,7 +59,7 @@ namespace Metrics
     }
 
     // OpenCV Implementation of Structural Similarity Measure
-    void MSSIM(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
+    static void MSSIM(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
     {
         const double C1 = 6.5025, C2 = 58.5225;
 

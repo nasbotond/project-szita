@@ -4,8 +4,6 @@
 // Include glfw3.h after our OpenGL definitions
 #include <GLFW/glfw3.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include "filter.hpp"
 #include "ply_writer.hpp"
 
@@ -56,6 +54,10 @@ namespace GUI
     static bool it_up_image_open = false;
 
     static bool save_to_file = false;
+    static bool get_point_clouds = false;
+    static bool calc_metrics = false;
+
+    static bool has_point_cloud = false;
 
     cv::Mat bilateral;
     cv::Mat gaussian;
@@ -116,40 +118,61 @@ namespace GUI
         iterative_upsampling(input, input_d_low, new_d, window_size, spatial_sigma, spectral_sigma);        
 
         // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::string results_suffix;
 
-        std::string results_suffix = "_" + std::to_string(spatial_sigma) + "_" + std::to_string(spectral_sigma) + "_" + std::to_string(window_size);
-
-        std::string str = fPath.substr(0, fPath.length()-2);
-        char ch = '/';
-        size_t index = str.rfind(ch);
-
-        if(index != std::string::npos)
+        if(get_point_clouds || save_to_file || calc_metrics)
         {
-            results_suffix = "out_" + fPath.substr(index+1, fPath.length()-2-index) + results_suffix;
+            results_suffix = "_" + std::to_string(spatial_sigma) + "_" + std::to_string(spectral_sigma) + "_" + std::to_string(window_size);
+
+            std::string str = fPath.substr(0, fPath.length()-2);
+            char ch = '/';
+            size_t index = str.rfind(ch);
+
+            if(index != std::string::npos)
+            {
+                results_suffix = "out_" + fPath.substr(index+1, fPath.length()-2-index) + results_suffix;
+            }
+            else
+            {
+                results_suffix = "out" + results_suffix;
+            }
+            std::filesystem::create_directories(fPath + results_suffix);
+        }
+
+        if(get_point_clouds)
+        {
+            cv::cvtColor(input, input, cv::COLOR_GRAY2BGR);
+
+            PLYWriter::Disparity2PointCloud(fPath + results_suffix + "/jb", jb.rows, jb.cols, jb, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
+            PLYWriter::Disparity2PointCloud(fPath + results_suffix + "/iterative", new_d.rows, new_d.cols, new_d, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
+
+            ply_actor_jbu = getPLYActor(fPath + results_suffix + "/jb.ply", fPath + results_suffix + "/", "jb");
+            ply_actor_it = getPLYActor(fPath + results_suffix + "/iterative.ply", fPath + results_suffix + "/", "iterative");
+
+            vtk_viewer_jbu.addActor(ply_actor_jbu);
+            vtk_viewer_it.addActor(ply_actor_it);
+            has_point_cloud = true;
         }
         else
         {
-            results_suffix = "out" + results_suffix;
+            vtk_jb_pc_open = false;
+            vtk_it_pc_open = false;
         }
 
-        std::filesystem::create_directories(fPath + results_suffix);
+        if(calc_metrics)
+        {
+            std::string metrics_dir = fPath + results_suffix + "/metrics";
+            std::filesystem::create_directories(metrics_dir);
+            Metrics::MAD(jb, input_d, metrics_dir + "/jb");
+            Metrics::MSE(jb, input_d, metrics_dir + "/jb");
+            Metrics::NCC(jb, input_d);
+            Metrics::MSSIM(jb, input_d, metrics_dir + "/jb");
 
-        cv::cvtColor(input, input, cv::COLOR_GRAY2BGR);
-
-        PLYWriter::Disparity2PointCloud(fPath + results_suffix + "/jb", jb.rows, jb.cols, jb, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
-        PLYWriter::Disparity2PointCloud(fPath + results_suffix + "/iterative", new_d.rows, new_d.cols, new_d, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
-
-        cv::cvtColor(bilateral, bilateral, cv::COLOR_GRAY2BGR);
-        cv::cvtColor(gaussian, gaussian, cv::COLOR_GRAY2BGR);
-        cv::cvtColor(box, box, cv::COLOR_GRAY2BGR);
-        cv::cvtColor(jb, jb, cv::COLOR_GRAY2BGR);
-        cv::cvtColor(new_d, new_d, cv::COLOR_GRAY2BGR);
-
-        ply_actor_jbu = getPLYActor(fPath + results_suffix + "/jb.ply", fPath + results_suffix + "/", "jb");
-        ply_actor_it = getPLYActor(fPath + results_suffix + "/iterative.ply", fPath + results_suffix + "/", "iterative");
-
-        vtk_viewer_jbu.addActor(ply_actor_jbu);
-        vtk_viewer_it.addActor(ply_actor_it);
+            Metrics::MAD(new_d, input_d, metrics_dir + "/it");
+            Metrics::MSE(new_d, input_d, metrics_dir + "/it");
+            Metrics::NCC(new_d, input_d);
+            Metrics::MSSIM(new_d, input_d, metrics_dir + "/it");
+        }
 
         if(save_to_file)
         {
@@ -159,6 +182,12 @@ namespace GUI
             cv::imwrite(fPath + results_suffix + "/jb.png", jb);
             cv::imwrite(fPath + results_suffix + "/iterative_sampling_depth.png", new_d);
         }
+
+        cv::cvtColor(bilateral, bilateral, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(gaussian, gaussian, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(box, box, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(jb, jb, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(new_d, new_d, cv::COLOR_GRAY2BGR);
         
         is_calculated = true;
         loading = false;
@@ -218,7 +247,11 @@ namespace GUI
 
             ImGui::InputInt(_labelPrefix("Focal length (pixels):").c_str(), &focal_length, 1, 10);
 
-            ImGui::Checkbox(_labelPrefix("Save results to files: ").c_str(), &save_to_file);
+            ImGui::Checkbox(_labelPrefix("Save filtered images to files: ").c_str(), &save_to_file);
+
+            ImGui::Checkbox(_labelPrefix("Get point clouds: ").c_str(), &get_point_clouds);
+
+            ImGui::Checkbox(_labelPrefix("Calculate and save metrics: ").c_str(), &calc_metrics);
 
             if(ImGui::Button("Calculate"))
             {     
@@ -307,8 +340,8 @@ namespace GUI
 
                 ImGui::Text("");
                 ImGui::Text("Show windows:");
-                ImGui::Checkbox(_labelPrefix("JBU point cloud:").c_str(), &vtk_jb_pc_open);
-                ImGui::Checkbox(_labelPrefix("Iter. Sampl. point cloud:").c_str(), &vtk_it_pc_open);
+                if(has_point_cloud) ImGui::Checkbox(_labelPrefix("JBU point cloud:").c_str(), &vtk_jb_pc_open);
+                if(has_point_cloud) ImGui::Checkbox(_labelPrefix("Iter. Sampl. point cloud:").c_str(), &vtk_it_pc_open);
                 ImGui::Checkbox(_labelPrefix("Gaussian:").c_str(), &gaussian_image_open);
                 ImGui::Checkbox(_labelPrefix("Box:").c_str(), &box_image_open);
                 ImGui::Checkbox(_labelPrefix("Bilateral:").c_str(), &bilateral_image_open);

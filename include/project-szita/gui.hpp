@@ -20,6 +20,7 @@
 #include "tinyfiledialogs.h"
 
 #include "mat_viewer.hpp"
+#include "metrics.hpp"
 
 namespace GUI
 {
