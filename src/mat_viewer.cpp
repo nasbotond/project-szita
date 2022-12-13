@@ -104,7 +104,7 @@ void MatViewer::addToGUI(bool withControls, bool withTooltip)
 
 	// Display scale
 	ImGuiSliderFlags flags = 1;
-	ImGui::SliderFloat((name + " Display Scale").c_str(), &imageScale, 0.1, 5, "%.3f", flags);//, 2.f);
+	ImGui::SliderFloat((name + " display scale").c_str(), &imageScale, 0.1, 5, "%.3f", flags);//, 2.f);
 
 	// Get data about the image and texture
 	ImGuiIO& io = ImGui::GetIO();

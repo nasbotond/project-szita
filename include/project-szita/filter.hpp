@@ -9,7 +9,6 @@ cv::Mat create_gaussian_kernel(int window_size, const float spatial_sigma = 2.5)
 
     int half_window_size = window_size / 2;
 
-    // see: lecture_03_slides.pdf, Slide 13
     // const double k = 2.5;
     const float k = spatial_sigma;
     const float r_max = std::sqrt(2.0 * half_window_size * half_window_size);
@@ -53,15 +52,6 @@ void box_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5
     const auto height = input.rows;
     output = cv::Mat::zeros(height, width, CV_8U);
 
-    // TEMPORARY CODE
-    // for (int r = 0; r < height; ++r) 
-    // {
-    //     for (int c = 0; c < width; ++c) 
-    //     {
-    //         output.at<uchar>(r, c) = 0;
-    //     }
-    // }
-
     for (int r = window_size / 2; r < height - window_size / 2; ++r) 
     {
         for (int c = window_size / 2; c < width - window_size / 2; ++c) 
@@ -89,15 +79,6 @@ void gaussian_filter(const cv::Mat& input, cv::Mat& output, const int window_siz
     cv::Mat gaussianKernel = create_gaussian_kernel(window_size);
     output = cv::Mat::zeros(height, width, CV_8U);
 
-    // TEMPORARY CODE
-    // for(int r = 0; r < height; ++r) 
-    // {
-    //     for(int c = 0; c < width; ++c) 
-    //     {
-    //         output.at<uchar>(r, c) = 0;
-    //     }
-    // }
-
     for(int r = window_size / 2; r < height - window_size / 2; ++r) 
     {
         for(int c = window_size / 2; c < width - window_size / 2; ++c) 
@@ -123,16 +104,7 @@ void bilateral_filter(const cv::Mat& input, cv::Mat& output, const int window_si
     cv::Mat gaussianKernel = create_gaussian_kernel(window_size, spatial_sigma);
     output = cv::Mat::zeros(height, width, CV_8U);
 
-    // TEMPORARY CODE
-    // for(int r = 0; r < height; ++r)
-    // {
-    //     for(int c = 0; c < width; ++c) 
-    //     {
-    //         output.at<uchar>(r, c) = 0;
-    //     }
-    // }
-
-    auto d = [](float a, float b) 
+    auto d = [](float a, float b)
     {
         return std::abs(a - b);
     };
@@ -177,15 +149,6 @@ void joint_bilateral_filter(const cv::Mat& input_color, const cv::Mat& input_dep
     cv::Mat gaussianKernel = create_gaussian_kernel(window_size, spatial_sigma);
     output = cv::Mat::zeros(height, width, CV_8U);
 
-    // TEMPORARY CODE
-    // for(int r = 0; r < height; ++r)
-    // {
-    //     for(int c = 0; c < width; ++c)
-    //     {
-    //         output.at<uchar>(r, c) = 0;
-    //     }
-    // }
-
     auto d = [](float a, float b) 
     {
         return std::abs(a - b);
@@ -223,6 +186,55 @@ void joint_bilateral_filter(const cv::Mat& input_color, const cv::Mat& input_dep
     }
 }
 
+void joint_bilateral_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& output, const int window_size = 5, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0) 
+{
+    const auto width = input_color.cols;
+    const auto height = input_color.rows;
+
+    cv::Mat gaussianKernel = create_gaussian_kernel(window_size, spatial_sigma);
+    // output = cv::Mat::zeros(height, width, CV_8U);
+
+    auto d = [](float a, float b) 
+    {
+        return std::abs(a - b);
+    };
+
+    auto p = [](float val, float sigma) 
+    {
+        // const float sigma = 5;
+        const float sigmaSq = sigma * sigma;
+        const float normalization = std::sqrt(2*M_PI) * sigma;
+        return (1 / normalization) * std::exp(-val / (2 * sigmaSq));
+    };
+
+    output = input_depth.clone();
+    cv::resize(output, output, input_color.size());
+    // cv::imshow("dd", output);
+
+    for(int r = window_size / 2; r < height - window_size / 2; ++r) 
+    {
+        for(int c = window_size / 2; c < width - window_size / 2; ++c) 
+        {
+            float sum_w = 0;
+            float sum = 0;
+
+            for(int i = -window_size / 2; i <= window_size / 2; ++i) 
+            {
+                for(int j = -window_size / 2; j <= window_size / 2; ++j) 
+                {
+                    float range_difference = d(input_color.at<uchar>(r, c), input_color.at<uchar>(r + i, c + j));
+
+                    float w = p(range_difference, spectral_sigma) * gaussianKernel.at<float>(i + window_size / 2, j + window_size / 2);
+
+                    sum += output.at<uchar>(r + i, c + j) * w;
+                    sum_w += w;
+                }
+            }
+            output.at<uchar>(r, c) = sum / sum_w;
+        }
+    }
+}
+
 void iterative_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& depth, const int window_size = 5.0, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0)
 {
 	int uf = log2(input_color.rows / input_depth.rows); // upsample factor
@@ -244,8 +256,3 @@ void iterative_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth
 	joint_bilateral_filter(input_color, depth, out_depth, window_size, spatial_sigma, spectral_sigma);
     depth = out_depth.clone();
 }
-
-// void joint_bilateral_upsampling()
-// {
-
-// }
