@@ -78,6 +78,7 @@ find_package(VTK COMPONENTS
   CommonDataModel
   IOPLY
   IOImage
+  IOLegacy
   CommonTransforms
   FiltersSources
   FiltersCore

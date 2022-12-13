@@ -6,9 +6,8 @@
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkProperty.h>
-#include <vtkImageActor.h>
-#include <vtkJPEGReader.h>
-#include <vtkPNGReader.h>
+#include <vtkSimplePointsWriter.h>
+#include <vtkSimplePointsReader.h>
 
 static vtkSmartPointer<vtkActor> getPLYActor(std::string filename)
 {
@@ -16,31 +15,37 @@ static vtkSmartPointer<vtkActor> getPLYActor(std::string filename)
 
     auto reader = vtkSmartPointer<vtkPLYReader>::New();
     reader->SetFileName(filename.c_str());
+    reader->Update();
+
+    auto writer = vtkSmartPointer<vtkSimplePointsWriter>::New();
+    writer->SetFileName("../data/points.xyz");
+    writer->SetInputConnection(reader->GetOutputPort());
+    writer->Update();
+
+    auto reader_xyz = vtkSmartPointer<vtkSimplePointsReader>::New();
+    reader_xyz->SetFileName("../data/points.xyz");
+    reader_xyz->Update();
 
     // Visualize
     auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(reader->GetOutputPort());
+    mapper->SetInputConnection(reader_xyz->GetOutputPort());
 
     auto actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
-    // actor->GetProperty()->SetColor(colors->GetColor3d("DarkGray").GetData());
+    // actor->GetProperty()->SetPointSize(6);
+    actor->GetProperty()->SetColor(colors->GetColor3d("Gold").GetData());
 
-    return actor;
-}
+    // auto colors = vtkSmartPointer<vtkNamedColors>::New();
 
-static vtkSmartPointer<vtkActor> getImageActor(std::string filename)
-{
-    auto colors = vtkSmartPointer<vtkNamedColors>::New();
+    // auto reader = vtkSmartPointer<vtkPLYReader>::New();
+    // reader->SetFileName(filename.c_str());
 
-    auto reader = vtkSmartPointer<vtkPNGReader>::New();
-    reader->SetFileName(filename.c_str());
+    // // Visualize
+    // auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    // mapper->SetInputConnection(reader->GetOutputPort());
 
-    // Visualize
-    auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(reader->GetOutputPort());
-
-    auto actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
+    // auto actor = vtkSmartPointer<vtkActor>::New();
+    // actor->SetMapper(mapper);
     // actor->GetProperty()->SetColor(colors->GetColor3d("DarkGray").GetData());
 
     return actor;

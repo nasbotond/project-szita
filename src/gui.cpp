@@ -7,10 +7,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "filter.hpp"
+#include "ply_writer.hpp"
 
 /* TODO:
-1. implement ability to change sigmas in filter functions and re-run
-2. write to point cloud and visualize those point clouds
+1. implement ability to change sigmas in filter functions and re-run (done)
+2. write to point cloud and visualize those point clouds (done)
 3. file saving solution
 4. file reading solution (hardcoded or from one directory ??)
 5. JBU upsampling vs iterative ... ?
@@ -30,19 +31,23 @@ namespace GUI
     static bool loading = false;
 
     // Init vtkViewers
-    VtkViewer vtk_viewer_pc;
-    VtkViewer vtk_viewer_oriented_pc;
+    VtkViewer vtk_viewer_jbu;
+    VtkViewer vtk_viewer_it;
 
-    vtkSmartPointer<vtkActor> ply_actor_pc;
-    vtkSmartPointer<vtkActor> ply_actor_oriented_pc;
+    vtkSmartPointer<vtkActor> ply_actor_jbu;
+    vtkSmartPointer<vtkActor> ply_actor_it;
 
     vtkNew<vtkNamedColors> colors;
 
     // Initial UI state variables set
     static bool black_background = false;
 
-    static float spatial_sigma = 0.003f;
-    static float spectral_sigma = 0.18f;
+    static float spatial_sigma = 2.5;
+    static float spectral_sigma = 5;
+    static int window_size = 5;
+    static int d_min = 200;
+    static int baseline = 160;
+    static int focal_length = 3740;
 
     static bool vtk_pc_open = true;
     static bool vtk_oriented_pc_open = true;
@@ -107,17 +112,24 @@ namespace GUI
         cv::Mat input_d = cv::imread("../data/art_disp_1.png", 0);
         cv::Mat input_d_low = cv::imread("../data/art_disp_low.png", 0);
         
-        gaussian_filter(input, gaussian);
-        box_filter(input, box);
-        bilateral_filter(input, bilateral);
-        joint_bilateral_filter(input, input_d, jb);
-        iterative_upsampling(input, input_d_low, new_d);
+        gaussian_filter(input, gaussian, window_size);
+        box_filter(input, box, window_size);
+        bilateral_filter(input, bilateral, window_size, spatial_sigma, spectral_sigma);
+        joint_bilateral_filter(input, input_d, jb, window_size, spatial_sigma, spectral_sigma);
+        iterative_upsampling(input, input_d_low, new_d, window_size, spatial_sigma, spectral_sigma);
+
+        cv::cvtColor(input, input, cv::COLOR_GRAY2BGR);
+
+        PLYWriter::Disparity2PointCloud("../data/jb", jb.rows, jb.cols, jb, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
+        PLYWriter::Disparity2PointCloud("../data/new_d", new_d.rows, new_d.cols, new_d, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
+
 
         cv::cvtColor(bilateral, bilateral, cv::COLOR_GRAY2BGR);
         cv::cvtColor(gaussian, gaussian, cv::COLOR_GRAY2BGR);
         cv::cvtColor(box, box, cv::COLOR_GRAY2BGR);
         cv::cvtColor(jb, jb, cv::COLOR_GRAY2BGR);
         cv::cvtColor(new_d, new_d, cv::COLOR_GRAY2BGR);
+        
 
         // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
@@ -138,11 +150,11 @@ namespace GUI
 
         // std::filesystem::create_directories(fPath + results_suffix);
 
-        ply_actor_pc = getPLYActor("../data/7_dp.ply");
-        ply_actor_oriented_pc = getPLYActor("../data/7_gt.ply");
+        ply_actor_jbu = getPLYActor("../data/jb.ply");
+        ply_actor_it = getPLYActor("../data/new_d.ply");
 
-        vtk_viewer_pc.addActor(ply_actor_pc);
-        vtk_viewer_oriented_pc.addActor(ply_actor_oriented_pc);
+        vtk_viewer_jbu.addActor(ply_actor_jbu);
+        vtk_viewer_it.addActor(ply_actor_it);
 
         if(save_to_file)
         {
@@ -170,8 +182,8 @@ namespace GUI
         viewer_jb = MatViewer("Joint Bilateral", jb);
         viewer_new_d = MatViewer("Iterative Upsampling", new_d);
 
-        vtk_viewer_pc.getRenderer()->SetBackground(colors->GetColor3d("BkgColor").GetData());
-        vtk_viewer_oriented_pc.getRenderer()->SetBackground(colors->GetColor3d("BkgColor").GetData());
+        vtk_viewer_jbu.getRenderer()->SetBackground(colors->GetColor3d("BkgColor").GetData());
+        vtk_viewer_it.getRenderer()->SetBackground(colors->GetColor3d("BkgColor").GetData());
     }
 
     void generateUI()
@@ -199,9 +211,17 @@ namespace GUI
 
             ImGui::Text("%s", fPath.c_str());
 
-            ImGui::InputFloat(_labelPrefix("Spatial sigma:").c_str(), &spatial_sigma, 0.001f, 0.01f, "%.5f");
+            ImGui::InputInt(_labelPrefix("Window size:").c_str(), &window_size, 1, 2);
 
-            ImGui::InputFloat(_labelPrefix("Spectral sigma:").c_str(), &spectral_sigma, 0.01f, 0.1f, "%.5f");
+            ImGui::InputFloat(_labelPrefix("Spatial sigma:").c_str(), &spatial_sigma, 0.001f, 0.01f, "%.1f");
+
+            ImGui::InputFloat(_labelPrefix("Spectral sigma:").c_str(), &spectral_sigma, 0.01f, 0.1f, "%.1f");
+
+            ImGui::InputInt(_labelPrefix("d_min:").c_str(), &d_min, 1, 10);
+
+            ImGui::InputInt(_labelPrefix("Baseline (mm):").c_str(), &baseline, 1, 10);
+
+            ImGui::InputInt(_labelPrefix("Focal length (pixels):").c_str(), &focal_length, 1, 10);
 
             ImGui::Checkbox(_labelPrefix("Save results to files: ").c_str(), &save_to_file);
 
@@ -268,8 +288,8 @@ namespace GUI
                 viewer_jb.update();
                 viewer_new_d.update();
 
-                auto renderer_pc = vtk_viewer_pc.getRenderer();                
-                auto renderer_oriented_pc = vtk_viewer_oriented_pc.getRenderer();
+                auto renderer_pc = vtk_viewer_jbu.getRenderer();                
+                auto renderer_oriented_pc = vtk_viewer_it.getRenderer();
 
                 ImGui::Checkbox(_labelPrefix("Black background:").c_str(), &black_background);
                 if(black_background)
@@ -312,7 +332,7 @@ namespace GUI
             ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
             ImGui::Begin("PC", &vtk_pc_open, VtkViewer::NoScrollFlags());            
             
-            vtk_viewer_pc.render();
+            vtk_viewer_jbu.render();
             ImGui::End();
         }
 
@@ -321,7 +341,7 @@ namespace GUI
             ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
             ImGui::Begin("Oriented PC", &vtk_oriented_pc_open, VtkViewer::NoScrollFlags());
 
-            vtk_viewer_oriented_pc.render();
+            vtk_viewer_it.render();
             ImGui::End();
         }
 
