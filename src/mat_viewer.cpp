@@ -75,7 +75,7 @@ void MatViewer::reloadTexture()
 
 MatViewer::MatViewer(std::string name, cv::Mat& mat)
 {
-	std::cout << "Mat: " << mat.cols << " x " << mat.rows << std::endl;
+	// std::cout << "Mat: " << mat.cols << " x " << mat.rows << std::endl;
 
 	this->name = name;
 	this->mat = &mat;
@@ -162,7 +162,7 @@ void MatViewer::generateTexture()
 {
 	if(mat->empty()) 
 	{
-		std::cout << "image empty" << std::endl;
+		// std::cout << "image empty" << std::endl;
 		return;
 	}
 
@@ -176,5 +176,5 @@ void MatViewer::generateTexture()
 	width = mat->cols;
 	height = mat->rows;
 
-	std::cout << "TextureID = " << textureID << std::endl;
+	// std::cout << "TextureID = " << textureID << std::endl;
 }

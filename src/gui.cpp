@@ -9,12 +9,10 @@
 
 /* TODO:
 5. JBU upsampling vs iterative ... ?
-6. implement metrics
 7. report execution times of the filter algorithms
-8. read d_min from txt
 */
 
-namespace GUI 
+namespace GUI
 {
     char const* selectedfolderPath;
     std::string fPath;
@@ -110,14 +108,40 @@ namespace GUI
         cv::Mat input = cv::imread(fPath + "view1.png", 0);
         cv::Mat input_d = cv::imread(fPath + "disp1.png", 0);
         cv::Mat input_d_low = cv::imread(fPath + "disp1_low.png", 0);
-        
-        gaussian_filter(input, gaussian, window_size);
-        box_filter(input, box, window_size);
-        bilateral_filter(input, bilateral, window_size, spatial_sigma, spectral_sigma);
-        joint_bilateral_filter(input, input_d, jb, window_size, spatial_sigma, spectral_sigma);
-        iterative_upsampling(input, input_d_low, new_d, window_size, spatial_sigma, spectral_sigma);        
 
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        
+
+        
+        auto start1 = std::chrono::high_resolution_clock::now();
+        gaussian_filter(input, gaussian, window_size);
+        auto stop1 = std::chrono::high_resolution_clock::now();
+        auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(stop1 - start1);
+        std::cout << "Time taken by Gaussian: " << duration1.count() << " milliseconds" << std::endl;
+
+        auto start2 = std::chrono::high_resolution_clock::now();
+        box_filter(input, box, window_size);
+        auto stop2 = std::chrono::high_resolution_clock::now();
+        auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(stop2 - start2);
+        std::cout << "Time taken by Box: " << duration2.count() << " milliseconds" << std::endl;
+
+        auto start3 = std::chrono::high_resolution_clock::now();
+        bilateral_filter(input, bilateral, window_size, spatial_sigma, spectral_sigma);
+        auto stop3 = std::chrono::high_resolution_clock::now();
+        auto duration3 = std::chrono::duration_cast<std::chrono::milliseconds>(stop3 - start3);
+        std::cout << "Time taken by Bilateral: " << duration3.count() << " milliseconds" << std::endl;
+
+        auto start4 = std::chrono::high_resolution_clock::now();
+        joint_bilateral_filter(input, input_d, jb, window_size, spatial_sigma, spectral_sigma);
+        auto stop4 = std::chrono::high_resolution_clock::now();
+        auto duration4 = std::chrono::duration_cast<std::chrono::milliseconds>(stop4 - start4);
+        std::cout << "Time taken by Joint bilateral: " << duration4.count() << " milliseconds" << std::endl;
+
+        auto start5 = std::chrono::high_resolution_clock::now();
+        iterative_upsampling(input, input_d_low, new_d, window_size, spatial_sigma, spectral_sigma);
+        auto stop5 = std::chrono::high_resolution_clock::now();
+        auto duration5 = std::chrono::duration_cast<std::chrono::milliseconds>(stop5 - start5);
+        std::cout << "Time taken by Iterative Upsampling: " << duration5.count() << " milliseconds" << std::endl;     
+
         std::string results_suffix;
 
         if(get_point_clouds || save_to_file || calc_metrics)
@@ -141,6 +165,18 @@ namespace GUI
 
         if(get_point_clouds)
         {
+            std::fstream file(fPath + "dmin.txt", std::ios::in);
+            std::string line;
+            if(file.is_open())
+            {
+                getline(file, line);
+                d_min = stoi(line);
+            }
+            else
+            {
+                throw std::runtime_error("Error: failed to open file");
+            }
+
             cv::cvtColor(input, input, cv::COLOR_GRAY2BGR);
 
             PLYWriter::Disparity2PointCloud(fPath + results_suffix + "/jb", jb.rows, jb.cols, jb, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
@@ -241,15 +277,18 @@ namespace GUI
 
             ImGui::InputFloat(_labelPrefix("Spectral sigma:").c_str(), &spectral_sigma, 0.01f, 0.1f, "%.1f");
 
-            ImGui::InputInt(_labelPrefix("d_min:").c_str(), &d_min, 1, 10);
+            ImGui::Checkbox(_labelPrefix("Get point clouds: ").c_str(), &get_point_clouds);
 
-            ImGui::InputInt(_labelPrefix("Baseline (mm):").c_str(), &baseline, 1, 10);
+            if(get_point_clouds)
+            {
+                ImGui::InputInt(_labelPrefix("d_min:").c_str(), &d_min, 1, 10);
 
-            ImGui::InputInt(_labelPrefix("Focal length (pixels):").c_str(), &focal_length, 1, 10);
+                ImGui::InputInt(_labelPrefix("Baseline (mm):").c_str(), &baseline, 1, 10);
+
+                ImGui::InputInt(_labelPrefix("Focal length (pixels):").c_str(), &focal_length, 1, 10);
+            }
 
             ImGui::Checkbox(_labelPrefix("Save filtered images to files: ").c_str(), &save_to_file);
-
-            ImGui::Checkbox(_labelPrefix("Get point clouds: ").c_str(), &get_point_clouds);
 
             ImGui::Checkbox(_labelPrefix("Calculate and save metrics: ").c_str(), &calc_metrics);
 
@@ -339,15 +378,28 @@ namespace GUI
                 renderer_oriented_pc->SetBackgroundAlpha(vtk2BkgAlpha);
 
                 ImGui::Text("");
-                ImGui::Text("Show windows:");
-                if(has_point_cloud) ImGui::Checkbox(_labelPrefix("JBU point cloud:").c_str(), &vtk_jb_pc_open);
-                if(has_point_cloud) ImGui::Checkbox(_labelPrefix("Iter. Sampl. point cloud:").c_str(), &vtk_it_pc_open);
-                ImGui::Checkbox(_labelPrefix("Gaussian:").c_str(), &gaussian_image_open);
-                ImGui::Checkbox(_labelPrefix("Box:").c_str(), &box_image_open);
-                ImGui::Checkbox(_labelPrefix("Bilateral:").c_str(), &bilateral_image_open);
-                ImGui::Checkbox(_labelPrefix("Joint bilateral:").c_str(), &jb_image_open);
-                ImGui::Checkbox(_labelPrefix("Iterative Upsampling:").c_str(), &it_up_image_open);
-                ImGui::Text("");
+                if(ImGui::CollapsingHeader("Show filtered images"))
+                {
+                    // ImGui::Text("Show windows:");                    
+                    ImGui::Checkbox(_labelPrefix("Gaussian:").c_str(), &gaussian_image_open);
+                    ImGui::Checkbox(_labelPrefix("Box:").c_str(), &box_image_open);
+                    ImGui::Checkbox(_labelPrefix("Bilateral:").c_str(), &bilateral_image_open);
+                    ImGui::Checkbox(_labelPrefix("Joint bilateral:").c_str(), &jb_image_open);
+                    ImGui::Checkbox(_labelPrefix("Iterative Upsampling:").c_str(), &it_up_image_open);
+                    ImGui::Text("");
+                }
+                // if(ImGui::CollapsingHeader("Show metrics"))
+                // {
+                // }
+                if(has_point_cloud)
+                {
+                    if(ImGui::CollapsingHeader("Show point clouds"))
+                    {
+                        ImGui::Checkbox(_labelPrefix("JBU point cloud:").c_str(), &vtk_jb_pc_open);
+                        ImGui::Checkbox(_labelPrefix("Iter. Sampl. point cloud:").c_str(), &vtk_it_pc_open);
+                    }
+                }
+                
             }
 
             ImGui::Text("\nApplication average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

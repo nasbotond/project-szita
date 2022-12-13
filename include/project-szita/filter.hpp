@@ -226,7 +226,6 @@ void joint_bilateral_filter(const cv::Mat& input_color, const cv::Mat& input_dep
 void iterative_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& depth, const int window_size = 5.0, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0)
 {
 	int uf = log2(input_color.rows / input_depth.rows); // upsample factor
-    std::cout << "uf: " << uf << std::endl;
 
 	depth = input_depth.clone();
 	cv::Mat guidance = input_color.clone();
