@@ -10,13 +10,10 @@
 #include "ply_writer.hpp"
 
 /* TODO:
-1. implement ability to change sigmas in filter functions and re-run (done)
-2. write to point cloud and visualize those point clouds (done)
-3. file saving solution
-4. file reading solution (hardcoded or from one directory ??)
 5. JBU upsampling vs iterative ... ?
 6. implement metrics
 7. report execution times of the filter algorithms
+8. read d_min from txt
 */
 
 namespace GUI 
@@ -49,8 +46,8 @@ namespace GUI
     static int baseline = 160;
     static int focal_length = 3740;
 
-    static bool vtk_pc_open = true;
-    static bool vtk_oriented_pc_open = true;
+    static bool vtk_jb_pc_open = true;
+    static bool vtk_it_pc_open = true;
 
     static bool box_image_open = false;
     static bool gaussian_image_open = false;
@@ -108,61 +105,59 @@ namespace GUI
 
     void* runFilters()
     {
-        cv::Mat input = cv::imread("../data/art_l.png", 0);
-        cv::Mat input_d = cv::imread("../data/art_disp_1.png", 0);
-        cv::Mat input_d_low = cv::imread("../data/art_disp_low.png", 0);
+        cv::Mat input = cv::imread(fPath + "view1.png", 0);
+        cv::Mat input_d = cv::imread(fPath + "disp1.png", 0);
+        cv::Mat input_d_low = cv::imread(fPath + "disp1_low.png", 0);
         
         gaussian_filter(input, gaussian, window_size);
         box_filter(input, box, window_size);
         bilateral_filter(input, bilateral, window_size, spatial_sigma, spectral_sigma);
         joint_bilateral_filter(input, input_d, jb, window_size, spatial_sigma, spectral_sigma);
-        iterative_upsampling(input, input_d_low, new_d, window_size, spatial_sigma, spectral_sigma);
+        iterative_upsampling(input, input_d_low, new_d, window_size, spatial_sigma, spectral_sigma);        
+
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+        std::string results_suffix = "_" + std::to_string(spatial_sigma) + "_" + std::to_string(spectral_sigma) + "_" + std::to_string(window_size);
+
+        std::string str = fPath.substr(0, fPath.length()-2);
+        char ch = '/';
+        size_t index = str.rfind(ch);
+
+        if(index != std::string::npos)
+        {
+            results_suffix = "out_" + fPath.substr(index+1, fPath.length()-2-index) + results_suffix;
+        }
+        else
+        {
+            results_suffix = "out" + results_suffix;
+        }
+
+        std::filesystem::create_directories(fPath + results_suffix);
 
         cv::cvtColor(input, input, cv::COLOR_GRAY2BGR);
 
-        PLYWriter::Disparity2PointCloud("../data/jb", jb.rows, jb.cols, jb, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
-        PLYWriter::Disparity2PointCloud("../data/new_d", new_d.rows, new_d.cols, new_d, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
-
+        PLYWriter::Disparity2PointCloud(fPath + results_suffix + "/jb", jb.rows, jb.cols, jb, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
+        PLYWriter::Disparity2PointCloud(fPath + results_suffix + "/iterative", new_d.rows, new_d.cols, new_d, 5, d_min, static_cast<double>(baseline), static_cast<double>(focal_length), input);
 
         cv::cvtColor(bilateral, bilateral, cv::COLOR_GRAY2BGR);
         cv::cvtColor(gaussian, gaussian, cv::COLOR_GRAY2BGR);
         cv::cvtColor(box, box, cv::COLOR_GRAY2BGR);
         cv::cvtColor(jb, jb, cv::COLOR_GRAY2BGR);
         cv::cvtColor(new_d, new_d, cv::COLOR_GRAY2BGR);
-        
 
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-        // std::string results_suffix = "_" +std::to_string(freq) + "_" + std::to_string(naive_gain) + "_" + std::to_string(madg_beta) + "_" + std::to_string(start_index) + "_" + std::to_string(end_index);
-
-        // std::string str = fPath.substr(0, fPath.length()-2);
-        // char ch = '/';
-        // size_t index = str.rfind(ch);
-
-        // if (index != std::string::npos)
-        // {
-        //     results_suffix = "out_" + fPath.substr(index+1, fPath.length()-2-index) + results_suffix;
-        // }
-        // else
-        // {
-        //     results_suffix = "out" + results_suffix;
-        // }
-
-        // std::filesystem::create_directories(fPath + results_suffix);
-
-        ply_actor_jbu = getPLYActor("../data/jb.ply");
-        ply_actor_it = getPLYActor("../data/new_d.ply");
+        ply_actor_jbu = getPLYActor(fPath + results_suffix + "/jb.ply", fPath + results_suffix + "/", "jb");
+        ply_actor_it = getPLYActor(fPath + results_suffix + "/iterative.ply", fPath + results_suffix + "/", "iterative");
 
         vtk_viewer_jbu.addActor(ply_actor_jbu);
         vtk_viewer_it.addActor(ply_actor_it);
 
         if(save_to_file)
         {
-            cv::imwrite("../data/gaussian.png", gaussian);
-            cv::imwrite("../data/box.png", box);
-            cv::imwrite("../data/bilateral.png", bilateral);
-            cv::imwrite("../data/jb.png", jb);
-            cv::imwrite("../data/iterative_sampling_depth.png", new_d);
+            cv::imwrite(fPath + results_suffix + "/gaussian.png", gaussian);
+            cv::imwrite(fPath + results_suffix + "/box.png", box);
+            cv::imwrite(fPath + results_suffix + "/bilateral.png", bilateral);
+            cv::imwrite(fPath + results_suffix + "/jb.png", jb);
+            cv::imwrite(fPath + results_suffix + "/iterative_sampling_depth.png", new_d);
         }
         
         is_calculated = true;
@@ -311,9 +306,9 @@ namespace GUI
                 renderer_oriented_pc->SetBackgroundAlpha(vtk2BkgAlpha);
 
                 ImGui::Text("");
-                ImGui::Text("Show PC:");
-                ImGui::Checkbox(_labelPrefix("PC:").c_str(), &vtk_pc_open);
-                ImGui::Checkbox(_labelPrefix("Oriented PC:").c_str(), &vtk_oriented_pc_open);
+                ImGui::Text("Show windows:");
+                ImGui::Checkbox(_labelPrefix("JBU point cloud:").c_str(), &vtk_jb_pc_open);
+                ImGui::Checkbox(_labelPrefix("Iter. Sampl. point cloud:").c_str(), &vtk_it_pc_open);
                 ImGui::Checkbox(_labelPrefix("Gaussian:").c_str(), &gaussian_image_open);
                 ImGui::Checkbox(_labelPrefix("Box:").c_str(), &box_image_open);
                 ImGui::Checkbox(_labelPrefix("Bilateral:").c_str(), &bilateral_image_open);
@@ -327,19 +322,19 @@ namespace GUI
             ImGui::End();
         }
 
-        if(vtk_pc_open && is_calculated)
+        if(vtk_jb_pc_open && is_calculated)
         {
             ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
-            ImGui::Begin("PC", &vtk_pc_open, VtkViewer::NoScrollFlags());            
+            ImGui::Begin("JBU", &vtk_jb_pc_open, VtkViewer::NoScrollFlags());            
             
             vtk_viewer_jbu.render();
             ImGui::End();
         }
 
-        if(vtk_oriented_pc_open && is_calculated)
+        if(vtk_it_pc_open && is_calculated)
         {
             ImGui::SetNextWindowSize(ImVec2(720, 480), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Oriented PC", &vtk_oriented_pc_open, VtkViewer::NoScrollFlags());
+            ImGui::Begin("Iter. Sampl.", &vtk_it_pc_open, VtkViewer::NoScrollFlags());
 
             vtk_viewer_it.render();
             ImGui::End();

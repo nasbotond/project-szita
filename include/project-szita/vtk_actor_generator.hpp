@@ -9,7 +9,7 @@
 #include <vtkSimplePointsWriter.h>
 #include <vtkSimplePointsReader.h>
 
-static vtkSmartPointer<vtkActor> getPLYActor(std::string filename)
+static vtkSmartPointer<vtkActor> getPLYActor(std::string filename, std::string out_dir, std::string trial)
 {
     auto colors = vtkSmartPointer<vtkNamedColors>::New();
 
@@ -17,13 +17,14 @@ static vtkSmartPointer<vtkActor> getPLYActor(std::string filename)
     reader->SetFileName(filename.c_str());
     reader->Update();
 
+    std::string out_filename = out_dir + trial + ".xyz";
     auto writer = vtkSmartPointer<vtkSimplePointsWriter>::New();
-    writer->SetFileName("../data/points.xyz");
+    writer->SetFileName(out_filename.c_str());
     writer->SetInputConnection(reader->GetOutputPort());
     writer->Update();
 
     auto reader_xyz = vtkSmartPointer<vtkSimplePointsReader>::New();
-    reader_xyz->SetFileName("../data/points.xyz");
+    reader_xyz->SetFileName(out_filename.c_str());
     reader_xyz->Update();
 
     // Visualize
