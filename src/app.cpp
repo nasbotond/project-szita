@@ -56,7 +56,7 @@ namespace GUI
         #endif
 
         // Create window with graphics context
-        window = glfwCreateWindow(1360, 720, "Orientation Estimation Visualization", NULL, NULL);
+        window = glfwCreateWindow(1360, 720, "Filter Visualization", NULL, NULL);
         if(window == NULL)
         {
             return;

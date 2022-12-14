@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 
-cv::Mat create_gaussian_kernel(int window_size, const float spatial_sigma = 2.5) 
+static cv::Mat create_gaussian_kernel(int window_size, const float spatial_sigma = 2.5) 
 {
     cv::Mat kernel(cv::Size(window_size, window_size), CV_32FC1);
 
@@ -46,7 +46,7 @@ cv::Mat create_gaussian_kernel(int window_size, const float spatial_sigma = 2.5)
     return kernel;
 }
 
-void box_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5) 
+static void box_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5) 
 {
     const auto width = input.cols;
     const auto height = input.rows;
@@ -71,7 +71,7 @@ void box_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5
     }
 }
 
-void gaussian_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5) 
+static void gaussian_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5) 
 {
     const auto width = input.cols;
     const auto height = input.rows;
@@ -96,7 +96,7 @@ void gaussian_filter(const cv::Mat& input, cv::Mat& output, const int window_siz
     }
 }
 
-void bilateral_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0)
+static void bilateral_filter(const cv::Mat& input, cv::Mat& output, const int window_size = 5, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0)
 {
     const auto width = input.cols;
     const auto height = input.rows;
@@ -141,7 +141,7 @@ void bilateral_filter(const cv::Mat& input, cv::Mat& output, const int window_si
     }
 }
 
-void joint_bilateral_filter(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& output, const int window_size = 5, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0) 
+static void joint_bilateral_filter(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& output, const int window_size = 5, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0) 
 {
     const auto width = input_color.cols;
     const auto height = input_color.rows;
@@ -186,7 +186,7 @@ void joint_bilateral_filter(const cv::Mat& input_color, const cv::Mat& input_dep
     }
 }
 
-void joint_bilateral_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& output, const int window_size = 5, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0) 
+static static void joint_bilateral_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& output, const int window_size = 5, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0) 
 {
     const auto width = input_color.cols;
     const auto height = input_color.rows;
@@ -235,7 +235,7 @@ void joint_bilateral_upsampling(const cv::Mat& input_color, const cv::Mat& input
     }
 }
 
-void iterative_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& depth, const int window_size = 5.0, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0)
+static void iterative_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& depth, const int window_size = 5.0, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0)
 {
 	int uf = log2(input_color.rows / input_depth.rows); // upsample factor
 

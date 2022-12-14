@@ -11,7 +11,7 @@
 namespace Metrics
 {
     // Mean Absolute Difference
-    static void MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
+    static float MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
     {
         cv::Mat mad;
         cv::absdiff(disp_est, disp_gt, mad);
@@ -19,10 +19,11 @@ namespace Metrics
 
         std::cout << "MAD mean: " << cv::mean(mad) << std::endl;
         cv::imwrite(output_file + "_mad.png", mad);
+        return cv::mean(mad)[0];
     }
 
     // Mean Squared Error
-    static void MSE(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
+    static float MSE(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
     {
         int height = disp_est.rows;
         int width = disp_est.cols;
@@ -39,10 +40,11 @@ namespace Metrics
 
         std::cout << "MSE mean: " << cv::mean(ssd) << std::endl;
         cv::imwrite(output_file + "_sad.png", ssd);
+        return cv::mean(ssd)[0];
     }
 
     // Normalized Cross Correlation
-    static void NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt)
+    static float NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt)
     {
         int height = disp_est.rows;
         int width = disp_est.cols;
@@ -56,10 +58,12 @@ namespace Metrics
         cv::matchTemplate(float_gt, float_est, ncc, cv::TM_CCORR_NORMED);
 
         std::cout << "NCC mean: " << cv::mean(ncc) << std::endl;
+
+        return cv::mean(ncc)[0];
     }
 
     // OpenCV Implementation of Structural Similarity Measure
-    static void MSSIM(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
+    static float MSSIM(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
     {
         const double C1 = 6.5025, C2 = 58.5225;
 
@@ -103,5 +107,7 @@ namespace Metrics
 
         cv::normalize(ssim_map, ssim_map, 255./(maxVal-minVal), 0, cv::NORM_MINMAX);
         cv::imwrite(output_file + "_ssim.png", ssim_map);
+
+        return cv::mean(ssim_map)[0];
     }
 }

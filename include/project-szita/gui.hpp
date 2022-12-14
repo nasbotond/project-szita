@@ -22,6 +22,12 @@
 #include "mat_viewer.hpp"
 #include "metrics.hpp"
 
+// Include glfw3.h after our OpenGL definitions
+#include <GLFW/glfw3.h>
+
+#include "filter.hpp"
+#include "ply_writer.hpp"
+
 namespace GUI
 {
     void initUI();
