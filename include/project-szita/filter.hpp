@@ -186,7 +186,7 @@ static void joint_bilateral_filter(const cv::Mat& input_color, const cv::Mat& in
     }
 }
 
-static static void joint_bilateral_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& output, const int window_size = 5, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0) 
+static void joint_bilateral_upsampling(const cv::Mat& input_color, const cv::Mat& input_depth, cv::Mat& output, const int window_size = 5, const float spatial_sigma = 2.5, const float spectral_sigma = 5.0) 
 {
     const auto width = input_color.cols;
     const auto height = input_color.rows;
