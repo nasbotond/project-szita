@@ -12,3 +12,7 @@ The code for this project is written in C++ and utilizes OpenCV for image manipu
 
 ## Usage
 - `./filter`
+
+| ![Naive Disp](data/gui_sample.png) | 
+|:--:| 
+| *GUI* |
